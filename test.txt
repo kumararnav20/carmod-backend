@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h2>Register Test</h2>
+    <form id="regForm">
+      <input type="text" id="email" placeholder="Email"><br>
+      <input type="text" id="username" placeholder="Username"><br>
+      <input type="password" id="password" placeholder="Password"><br>
+      <button type="submit">Register</button>
+    </form>
+
+    <script>
+      document.getElementById("regForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const res = await fetch("http://localhost:5000/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("email").value,
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+          }),
+        });
+        const data = await res.json();
+        alert(JSON.stringify(data));
+      });
+    </script>
+  </body>
+</html>
