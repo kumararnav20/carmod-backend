@@ -41,7 +41,13 @@ console.log('📧 Resend configured:', {
 });
 
 // ✅ Middleware (must be at the top)
-app.use(cors()); // Enable CORS for frontend communication
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    process.env.FRONTEND_URL
+  ],
+  credentials: true
+})); // Enable CORS for frontend communication
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploaded files
