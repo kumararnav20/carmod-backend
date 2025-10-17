@@ -1,5 +1,5 @@
+import "dotenv/config.js";
 import express from "express";
-import dotenv from "dotenv";
 import pkg from "pg";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -10,8 +10,10 @@ import { fileURLToPath } from "url";
 import cors from "cors";
 import { v2 as cloudinary } from 'cloudinary';
 import { Resend } from 'resend';
+import aiRoutes from "./routes/aiRoutes.js";
+import generateRoutes from "./routes/generateRoutes.js";
+import partRoutes from "./routes/partRoutes.js";
 
-dotenv.config();
 
 const { Pool } = pkg;
 const app = express();
@@ -51,6 +53,10 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploaded files
+app.use("/api/ai", aiRoutes);
+app.use("/api/generate", generateRoutes);
+app.use("/api/part", partRoutes);
+
 
 // ✅ Create uploads folder if it doesn't exist (still needed for temporary storage)
 const uploadsDir = path.join(__dirname, 'uploads');
