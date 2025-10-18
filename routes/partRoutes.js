@@ -1,6 +1,5 @@
 import { generatePartGLB } from "../services/partBuilderService.js";
 
-// backend/routes/partRoutes.js
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -9,7 +8,7 @@ const router = express.Router();
 
 /**
  * POST /api/part/create
- * Used by AIChatBox when user says "make an exhaust"
+ * Returns a 3D GLB file (used by AIChatBox for new parts)
  */
 router.post("/create", async (req, res) => {
   try {
@@ -20,8 +19,8 @@ router.post("/create", async (req, res) => {
       return res.status(400).json({ error: "Prompt is required" });
     }
 
-    // 👇 For now, we’ll just send a placeholder .glb file back
-    const filePath = path.join(process.cwd(), "backend", "sample_parts", "placeholder.glb");
+    // Point to your placeholder GLB inside carmod-backend
+    const filePath = path.join(process.cwd(), "carmod-backend", "sample_parts", "placeholder.glb");
 
     if (!fs.existsSync(filePath)) {
       console.warn("⚠️ No placeholder.glb found, sending dummy data");
