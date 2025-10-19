@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/storage": "^7.17.2",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.7.0",
     "cors": "^2.8.5",

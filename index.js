@@ -8,12 +8,19 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
-import { v2 as cloudinary } from 'cloudinary';
 import { Resend } from 'resend';
 import aiRoutes from "./routes/aiRoutes.js";
 import generateRoutes from "./routes/generateRoutes.js";
 import partRoutes from "./routes/partRoutes.js";
 
+// ✅ Google Cloud Storage setup
+import { Storage } from "@google-cloud/storage";
+
+const gcs = new Storage({
+  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+});
+const bucket = gcs.bucket(process.env.GCS_BUCKET_NAME);
+console.log("☁️ Google Cloud Storage configured:", process.env.GCS_BUCKET_NAME);
 
 const { Pool } = pkg;
 const app = express();
@@ -22,18 +29,9 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
 
-console.log('☁️ Cloudinary configured:', {
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? '✅' : '❌',
-  api_key: process.env.CLOUDINARY_API_KEY ? '✅' : '❌',
-  api_secret: process.env.CLOUDINARY_API_SECRET ? '✅' : '❌'
-});
+
+
 
 // ✅ Configure Resend for emails
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -94,7 +92,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: { 
-    fileSize: 50 * 1024 * 1024 // 50MB max
+    fileSize: 250 * 1024 * 1024 // 50MB max
   },
   fileFilter: function (req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -234,19 +232,13 @@ app.post("/api/upload-part", authenticateToken, upload.single('file'), async (re
     }
 
     // 🚀 UPLOAD TO CLOUDINARY
-    console.log('☁️ Uploading to Cloudinary...');
-    const cloudinaryResult = await cloudinary.uploader.upload(file.path, {
-      resource_type: 'raw',
-      folder: 'carmod-parts',
-      public_id: `week${weekNumber}-${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`,
-      overwrite: false
+    console.log('☁️ Uploading to gcs...');
+    const destination = `week${weekNumber}/${Date.now()}-${file.originalname}`;
+    await bucket.upload(file.path, {
+        destination,
+        metadata: { contentType: file.mimetype }
     });
-
-    console.log('✅ Cloudinary upload successful!');
-    console.log('🔗 File URL:', cloudinaryResult.secure_url);
-
-    const cloudinaryUrl = cloudinaryResult.secure_url;
-    const fileSize = file.size;
+    const publicUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${destination}`;
 
     // Delete the local temporary file
     if (fs.existsSync(file.path)) {
@@ -256,6 +248,7 @@ app.post("/api/upload-part", authenticateToken, upload.single('file'), async (re
 
     // Generate anonymous ID
     const anonymousId = 'ENTRY_' + Date.now().toString().slice(-5);
+    const fileSize = file.size;
 
     // Save to database with Cloudinary URL and voting fields
     const result = await pool.query(
@@ -271,7 +264,7 @@ app.post("/api/upload-part", authenticateToken, upload.single('file'), async (re
         partType,
         carModel,
         description || '',
-        cloudinaryUrl,
+        publicUrl,
         fileSize,
         weekNumber,
         'PENDING', // New submissions start as PENDING
@@ -349,7 +342,7 @@ app.post("/api/upload-part", authenticateToken, upload.single('file'), async (re
         partName: result.rows[0].part_name,
         weekNumber: result.rows[0].week_number,
         status: result.rows[0].status,
-        fileUrl: cloudinaryUrl,
+        fileUrl: publicUrl,
         votesRequired: 25,
         votesCompleted: 0
       }
