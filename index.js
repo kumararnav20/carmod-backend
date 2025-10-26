@@ -88,19 +88,18 @@ pool.connect()
   .catch(err => console.error("❌ Database connection error:", err));
 
 // ✅ Configure multer for file uploads (temporary local storage before Cloudinary)
-const storage = multer.diskStorage({
+const multerStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
-    // Create unique filename: timestamp-originalname
     const uniqueName = Date.now() + '-' + file.originalname;
     cb(null, uniqueName);
   }
 });
 
 const upload = multer({
-  storage: storage,
+  storage: multerStorage,
   limits: { 
     fileSize: 50 * 1024 * 1024 // 50MB max
   },
@@ -243,9 +242,10 @@ app.post("/api/upload-part", authenticateToken, upload.single('file'), async (re
 
    // 🚀 Upload to Google Cloud Storage
 console.log("☁️ Uploading to Google Cloud Storage...");
-const destination = `week${weekNumber}-${Date.now()}-${file.originalname}`;
+
+const uniqueFileName = `${Date.now()}-${file.originalname}`;
 await bucket.upload(file.path, {
-  destination,
+  destination: uniqueFileName,
   gzip: true,
   resumable: false,
   metadata: {
@@ -285,7 +285,7 @@ console.log("✅ Uploaded to:", publicUrl);
         partType,
         carModel,
         description || '',
-        cloudinaryUrl,
+        publicUrl,
         fileSize,
         weekNumber,
         'PENDING', // New submissions start as PENDING
