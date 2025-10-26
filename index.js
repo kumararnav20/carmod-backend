@@ -16,7 +16,6 @@ import partRoutes from "./routes/partRoutes.js";
 import { Storage } from "@google-cloud/storage";
 import galleryRoutes from "./routes/galleryRoutes.js";
 
-app.use("/api/gallery", galleryRoutes);
 
 const storage = new Storage({
   keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
@@ -27,6 +26,7 @@ console.log("☁️ Google Cloud Storage configured:", process.env.GCS_BUCKET_NA
 
 const { Pool } = pkg;
 const app = express();
+app.use("/api/gallery", galleryRoutes);
 
 // Get __dirname in ES6 modules
 const __filename = fileURLToPath(import.meta.url);
