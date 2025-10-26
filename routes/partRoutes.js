@@ -11,9 +11,12 @@ const router = express.Router();
  * Returns a 3D GLB file (used by AIChatBox for new parts)
  */
 router.post("/create", async (req, res) => {
+  console.log("🧭 Current working directory:", process.cwd());
+  console.log("🔍 Expected placeholder path:", path.join(process.cwd(), "sample_parts", "placeholder.glb"));
+
   try {
     console.log("🧱 Received part creation request:", req.body);
-
+    
     const { prompt } = req.body || {};
     if (!prompt) {
       return res.status(400).json({ error: "Prompt is required" });
