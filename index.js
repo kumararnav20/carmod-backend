@@ -8,7 +8,6 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
-import { v2 as cloudinary } from 'cloudinary';
 import { Resend } from 'resend';
 import aiRoutes from "./routes/aiRoutes.js";
 import generateRoutes from "./routes/generateRoutes.js";
@@ -256,6 +255,18 @@ await bucket.upload(file.path, {
 
 // Make the file public
 await bucket.file(destination).makePublic();
+// ✅ Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+console.log('☁️ Cloudinary configured:', {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? '✅' : '❌',
+  api_key: process.env.CLOUDINARY_API_KEY ? '✅' : '❌',
+  api_secret: process.env.CLOUDINARY_API_SECRET ? '✅' : '❌'
+});
 
 const publicUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${destination}`;
 console.log("✅ Uploaded to:", publicUrl);
@@ -363,7 +374,7 @@ console.log("✅ Uploaded to:", publicUrl);
         partName: result.rows[0].part_name,
         weekNumber: result.rows[0].week_number,
         status: result.rows[0].status,
-        fileUrl: cloudinaryUrl,
+        fileUrl: publicUrl,
         votesRequired: 25,
         votesCompleted: 0
       }
