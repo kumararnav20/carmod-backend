@@ -14,6 +14,9 @@ import generateRoutes from "./routes/generateRoutes.js";
 import partRoutes from "./routes/partRoutes.js";
 // ✅ Google Cloud Storage setup
 import { Storage } from "@google-cloud/storage";
+import galleryRoutes from "./routes/galleryRoutes.js";
+
+app.use("/api/gallery", galleryRoutes);
 
 const storage = new Storage({
   keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
