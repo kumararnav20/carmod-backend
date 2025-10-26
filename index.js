@@ -29,18 +29,6 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-console.log('☁️ Cloudinary configured:', {
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? '✅' : '❌',
-  api_key: process.env.CLOUDINARY_API_KEY ? '✅' : '❌',
-  api_secret: process.env.CLOUDINARY_API_SECRET ? '✅' : '❌'
-});
 
 // ✅ Configure Resend for emails
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -255,18 +243,7 @@ await bucket.upload(file.path, {
 
 // Make the file public
 await bucket.file(destination).makePublic();
-// ✅ Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
 
-console.log('☁️ Cloudinary configured:', {
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? '✅' : '❌',
-  api_key: process.env.CLOUDINARY_API_KEY ? '✅' : '❌',
-  api_secret: process.env.CLOUDINARY_API_SECRET ? '✅' : '❌'
-});
 
 const publicUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${destination}`;
 console.log("✅ Uploaded to:", publicUrl);
