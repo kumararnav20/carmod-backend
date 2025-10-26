@@ -26,7 +26,6 @@ console.log("☁️ Google Cloud Storage configured:", process.env.GCS_BUCKET_NA
 
 const { Pool } = pkg;
 const app = express();
-app.use("/api/gallery", galleryRoutes);
 
 // Get __dirname in ES6 modules
 const __filename = fileURLToPath(import.meta.url);
@@ -55,6 +54,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/generate", generateRoutes);
 app.use("/api/part", partRoutes);
 
+app.use("/api/gallery", galleryRoutes);
 
 // ✅ Create uploads folder if it doesn't exist (still needed for temporary storage)
 const uploadsDir = path.join(__dirname, 'uploads');
