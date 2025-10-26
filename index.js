@@ -8,19 +8,20 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import { v2 as cloudinary } from 'cloudinary';
 import { Resend } from 'resend';
 import aiRoutes from "./routes/aiRoutes.js";
 import generateRoutes from "./routes/generateRoutes.js";
 import partRoutes from "./routes/partRoutes.js";
-
 // ✅ Google Cloud Storage setup
 import { Storage } from "@google-cloud/storage";
 
-const gcs = new Storage({
+const storage = new Storage({
   keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 });
-const bucket = gcs.bucket(process.env.GCS_BUCKET_NAME);
+const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 console.log("☁️ Google Cloud Storage configured:", process.env.GCS_BUCKET_NAME);
+
 
 const { Pool } = pkg;
 const app = express();
@@ -29,9 +30,18 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ✅ Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-
-
+console.log('☁️ Cloudinary configured:', {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? '✅' : '❌',
+  api_key: process.env.CLOUDINARY_API_KEY ? '✅' : '❌',
+  api_secret: process.env.CLOUDINARY_API_SECRET ? '✅' : '❌'
+});
 
 // ✅ Configure Resend for emails
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -41,25 +51,13 @@ console.log('📧 Resend configured:', {
 });
 
 // ✅ Middleware (must be at the top)
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://carmod-showdown-frontend.vercel.app'
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn('🚫 Blocked CORS request from:', origin);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-  })
-);
- // Enable CORS for frontend communication
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    process.env.FRONTEND_URL
+  ],
+  credentials: true
+})); // Enable CORS for frontend communication
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploaded files
@@ -104,7 +102,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: { 
-    fileSize: 250 * 1024 * 1024 // 50MB max
+    fileSize: 50 * 1024 * 1024 // 50MB max
   },
   fileFilter: function (req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -243,14 +241,26 @@ app.post("/api/upload-part", authenticateToken, upload.single('file'), async (re
       return res.status(400).json({ error: 'Competition has ended!' });
     }
 
-    // 🚀 UPLOAD TO CLOUDINARY
-    console.log('☁️ Uploading to gcs...');
-    const destination = `week${weekNumber}/${Date.now()}-${file.originalname}`;
-    await bucket.upload(file.path, {
-        destination,
-        metadata: { contentType: file.mimetype }
-    });
-    const publicUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${destination}`;
+   // 🚀 Upload to Google Cloud Storage
+console.log("☁️ Uploading to Google Cloud Storage...");
+const destination = `week${weekNumber}-${Date.now()}-${file.originalname}`;
+await bucket.upload(file.path, {
+  destination,
+  gzip: true,
+  resumable: false,
+  metadata: {
+    contentType: "model/gltf-binary",
+    cacheControl: "public, max-age=31536000",
+  },
+});
+
+// Make the file public
+await bucket.file(destination).makePublic();
+
+const publicUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${destination}`;
+console.log("✅ Uploaded to:", publicUrl);
+
+    const fileSize = file.size;
 
     // Delete the local temporary file
     if (fs.existsSync(file.path)) {
@@ -260,7 +270,6 @@ app.post("/api/upload-part", authenticateToken, upload.single('file'), async (re
 
     // Generate anonymous ID
     const anonymousId = 'ENTRY_' + Date.now().toString().slice(-5);
-    const fileSize = file.size;
 
     // Save to database with Cloudinary URL and voting fields
     const result = await pool.query(
@@ -276,7 +285,7 @@ app.post("/api/upload-part", authenticateToken, upload.single('file'), async (re
         partType,
         carModel,
         description || '',
-        publicUrl,
+        cloudinaryUrl,
         fileSize,
         weekNumber,
         'PENDING', // New submissions start as PENDING
@@ -354,7 +363,7 @@ app.post("/api/upload-part", authenticateToken, upload.single('file'), async (re
         partName: result.rows[0].part_name,
         weekNumber: result.rows[0].week_number,
         status: result.rows[0].status,
-        fileUrl: publicUrl,
+        fileUrl: cloudinaryUrl,
         votesRequired: 25,
         votesCompleted: 0
       }
